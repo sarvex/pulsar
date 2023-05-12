@@ -46,16 +46,10 @@ def get(base_url, path):
 
 
 def parse_date(d):
-    if d:
-        dt = parse_datetime(d)
-        if dt.tzinfo:
-            # There is already the timezone set
-            return dt
-        else:
-            # Assume UTC if no timezone
-            return pytz.timezone('UTC').localize(parse_datetime(d))
-    else:
+    if not d:
         return None
+    dt = parse_datetime(d)
+    return dt if dt.tzinfo else pytz.timezone('UTC').localize(parse_datetime(d))
 
 
 # Fetch the stats for a given broker

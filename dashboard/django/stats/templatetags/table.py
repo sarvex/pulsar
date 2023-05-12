@@ -29,19 +29,19 @@ register = template.Library()
 def column_header(table, column, text):
     selected = 'style="color: #D84A24"'
     if table.sort == column:
-        sort = '-' + column
+        sort = f'-{column}'
         arrow = '&darr;'
-    elif table.sort == ('-' + column):
+    elif table.sort == f'-{column}':
         sort = column
         arrow = '&uarr;'
     else:
-        sort = '-' + column
+        sort = f'-{column}'
         arrow = ''
         selected = ''
 
     params = dict(table.request.GET)
     params['sort'] = [sort]
-    params_str = '&'.join( (k + '=' + v[0]) for k,v in params.items())
+    params_str = '&'.join(f'{k}={v[0]}' for k,v in params.items())
 
     return format_html('<th><a href="?{}"><span {}>{} {}</span></a></th>\n',
         params_str,
@@ -63,15 +63,15 @@ def table_footer(table):
             footer += '<span class="this-page">%d</span>\n' % page
         else:
             params['page'] = [str(page)]
-            params_str = '&'.join( (k + '=' + v[0]) for k,v in params.items())
+            params_str = '&'.join(f'{k}={v[0]}' for k,v in params.items())
             footer += '<a href="?%s">%d</a>\n' % (params_str, page)
 
     footer += ' Total: %d\n' % table.paginator.count
 
     del params['page']
     params['show-all'] = '1'
-    params_str = '&'.join( (k + '=' + v[0]) for k,v in params.items())
-    footer += ' | <a href="?%s">Show all</a>' % params_str
+    params_str = '&'.join(f'{k}={v[0]}' for k,v in params.items())
+    footer += f' | <a href="?{params_str}">Show all</a>'
     footer += '</p>'
     return mark_safe(footer)
 

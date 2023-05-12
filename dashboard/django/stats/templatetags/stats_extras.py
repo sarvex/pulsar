@@ -55,13 +55,11 @@ def file_size_unit(bytes_):
 
 @register.filter(name='mbps')
 def mbps(bytes_per_seconds):
-    if not bytes_per_seconds: return 0.0
-    else: return float(bytes_per_seconds) * 8 / 1024 / 1024
+     return float(bytes_per_seconds) * 8 / 1024 / 1024 if bytes_per_seconds else 0.0
 
 @register.filter(name='safe_intcomma')
 def safe_intcomma(n):
-    if not n: return 0
-    else: return intcomma(n)
+     return 0 if not n else intcomma(n)
 
 @register.filter(name='times')
 def times(number):

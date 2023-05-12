@@ -1279,14 +1279,16 @@ class CryptoKeyReader:
 
 def _check_type(var_type, var, name):
     if not isinstance(var, var_type):
-        raise ValueError("Argument %s is expected to be of type '%s' and not '%s'"
-                         % (name, var_type.__name__, type(var).__name__))
+        raise ValueError(
+            f"Argument {name} is expected to be of type '{var_type.__name__}' and not '{type(var).__name__}'"
+        )
 
 
 def _check_type_or_none(var_type, var, name):
     if var is not None and not isinstance(var, var_type):
-        raise ValueError("Argument %s is expected to be either None or of type '%s'"
-                         % (name, var_type.__name__))
+        raise ValueError(
+            f"Argument {name} is expected to be either None or of type '{var_type.__name__}'"
+        )
 
 
 def _listener_wrapper(listener, schema):

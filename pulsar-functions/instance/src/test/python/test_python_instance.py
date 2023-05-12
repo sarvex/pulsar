@@ -35,10 +35,14 @@ import unittest
 
 class TestContextImpl(unittest.TestCase):
 
-  def Any(cls):
-    class Any(cls):
+  def Any(self):
+
+
+
+    class Any(self):
       def __eq__(self, other):
         return True
+
     return Any()
 
   def setUp(self):

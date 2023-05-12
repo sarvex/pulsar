@@ -58,16 +58,13 @@ DEFAULT_SERIALIZER = "serde.IdentitySerDe"
 PY3 = sys.version_info[0] >= 3
 
 def base64ify(bytes_or_str):
-    if PY3 and isinstance(bytes_or_str, str):
-        input_bytes = bytes_or_str.encode('utf8')
-    else:
-        input_bytes = bytes_or_str
+  if PY3 and isinstance(bytes_or_str, str):
+      input_bytes = bytes_or_str.encode('utf8')
+  else:
+      input_bytes = bytes_or_str
 
-    output_bytes = base64.urlsafe_b64encode(input_bytes)
-    if PY3:
-        return output_bytes.decode('ascii')
-    else:
-        return output_bytes
+  output_bytes = base64.urlsafe_b64encode(input_bytes)
+  return output_bytes.decode('ascii') if PY3 else output_bytes
 
 class PythonInstance(object):
   def __init__(self,
@@ -108,11 +105,14 @@ class PythonInstance(object):
     self.expected_healthcheck_interval = expected_healthcheck_interval
     self.secrets_provider = secrets_provider
     self.state_context = state_context.NullStateContext()
-    self.metrics_labels = [function_details.tenant,
-                           "%s/%s" % (function_details.tenant, function_details.namespace),
-                           function_details.name,
-                           instance_id, cluster_name,
-                           "%s/%s/%s" % (function_details.tenant, function_details.namespace, function_details.name)]
+    self.metrics_labels = [
+        function_details.tenant,
+        f"{function_details.tenant}/{function_details.namespace}",
+        function_details.name,
+        instance_id,
+        cluster_name,
+        f"{function_details.tenant}/{function_details.namespace}/{function_details.name}",
+    ]
     self.stats = Stats(self.metrics_labels)
 
   def health_check(self):
@@ -136,9 +136,7 @@ class PythonInstance(object):
     if self.instance_config.function_details.source.subscriptionType == Function_pb2.SubscriptionType.Value("FAILOVER"):
       mode = pulsar._pulsar.ConsumerType.Failover
 
-    subscription_name = str(self.instance_config.function_details.tenant) + "/" + \
-                        str(self.instance_config.function_details.namespace) + "/" + \
-                        str(self.instance_config.function_details.name)
+    subscription_name = f"{str(self.instance_config.function_details.tenant)}/{str(self.instance_config.function_details.namespace)}/{str(self.instance_config.function_details.name)}"
 
     properties = util.get_properties(util.getFullyQualifiedFunctionName(
                         self.instance_config.function_details.tenant,
@@ -152,7 +150,9 @@ class PythonInstance(object):
       else:
         serde_kclass = util.import_class(os.path.dirname(self.user_code), serde)
       self.input_serdes[topic] = serde_kclass()
-      Log.debug("Setting up consumer for topic %s with subname %s" % (topic, subscription_name))
+      Log.debug(
+          f"Setting up consumer for topic {topic} with subname {subscription_name}"
+      )
 
       self.consumers[topic] = self.pulsar_client.subscribe(
         str(topic), subscription_name,
@@ -168,7 +168,9 @@ class PythonInstance(object):
       else:
         serde_kclass = util.import_class(os.path.dirname(self.user_code), consumer_conf.serdeClassName)
       self.input_serdes[topic] = serde_kclass()
-      Log.debug("Setting up consumer for topic %s with subname %s" % (topic, subscription_name))
+      Log.debug(
+          f"Setting up consumer for topic {topic} with subname {subscription_name}"
+      )
 
       consumer_args = {
         "consumer_type": mode,
@@ -192,8 +194,12 @@ class PythonInstance(object):
 
     function_kclass = util.import_class(os.path.dirname(self.user_code), self.instance_config.function_details.className)
     if function_kclass is None:
-      Log.critical("Could not import User Function Module %s" % self.instance_config.function_details.className)
-      raise NameError("Could not import User Function Module %s" % self.instance_config.function_details.className)
+      Log.critical(
+          f"Could not import User Function Module {self.instance_config.function_details.className}"
+      )
+      raise NameError(
+          f"Could not import User Function Module {self.instance_config.function_details.className}"
+      )
     try:
       self.function_class = function_kclass()
     except:
@@ -221,7 +227,7 @@ class PythonInstance(object):
         msg = self.queue.get(True)
         if isinstance(msg, InternalQuitMessage):
           break
-        Log.debug("Got a message from topic %s" % msg.topic)
+        Log.debug(f"Got a message from topic {msg.topic}")
         # deserialize message
         input_object = msg.serde.deserialize(msg.message.data())
         # set current message in context
@@ -260,7 +266,7 @@ class PythonInstance(object):
           self.stats.incr_total_processed_successfully()
 
       except Exception as e:
-        Log.error("Uncaught exception in Python instance: %s" % e);
+        Log.error(f"Uncaught exception in Python instance: {e}");
         self.stats.incr_total_sys_exceptions(e)
         if msg:
           msg.consumer.negative_acknowledge(msg.message)
@@ -270,7 +276,7 @@ class PythonInstance(object):
       if self.auto_ack:
         consumer.acknowledge(orig_message)
     else:
-      error_msg = "Failed to publish to topic [%s] with error [%s] with src message id [%s]" % (topic, result, orig_message.message_id())
+      error_msg = f"Failed to publish to topic [{topic}] with error [{result}] with src message id [{orig_message.message_id()}]"
       Log.error(error_msg)
       self.stats.incr_total_sys_exceptions(Exception(error_msg))
       # If producer fails send output then send neg ack for input message back to broker
@@ -296,22 +302,24 @@ class PythonInstance(object):
 
   def setup_output_serde(self):
     if self.instance_config.function_details.sink.serDeClassName != None and \
-            len(self.instance_config.function_details.sink.serDeClassName) > 0:
+              len(self.instance_config.function_details.sink.serDeClassName) > 0:
       serde_kclass = util.import_class(os.path.dirname(self.user_code), self.instance_config.function_details.sink.serDeClassName)
-      self.output_serde = serde_kclass()
     else:
       global DEFAULT_SERIALIZER
       serde_kclass = util.import_class(os.path.dirname(self.user_code), DEFAULT_SERIALIZER)
-      self.output_serde = serde_kclass()
+
+    self.output_serde = serde_kclass()
 
   def setup_producer(self):
     if self.instance_config.function_details.sink.topic != None and \
-            len(self.instance_config.function_details.sink.topic) > 0:
-      Log.debug("Setting up producer for topic %s" % self.instance_config.function_details.sink.topic)
+              len(self.instance_config.function_details.sink.topic) > 0:
+      Log.debug(
+          f"Setting up producer for topic {self.instance_config.function_details.sink.topic}"
+      )
 
       batch_type = pulsar.BatchingType.Default
       if self.instance_config.function_details.sink.producerSpec.batchBuilder != None and \
-            len(self.instance_config.function_details.sink.producerSpec.batchBuilder) > 0:
+              len(self.instance_config.function_details.sink.producerSpec.batchBuilder) > 0:
         batch_builder = self.instance_config.function_details.sink.producerSpec.batchBuilder
         if batch_builder == "KEY_BASED":
           batch_type = pulsar.BatchingType.KeyBased
@@ -334,8 +342,7 @@ class PythonInstance(object):
       )
 
   def setup_state(self):
-    table_ns = "%s_%s" % (str(self.instance_config.function_details.tenant),
-                          str(self.instance_config.function_details.namespace))
+    table_ns = f"{str(self.instance_config.function_details.tenant)}_{str(self.instance_config.function_details.namespace)}"
     table_ns = table_ns.replace("-", "_")
     table_name = str(self.instance_config.function_details.name)
     return state_context.create_state_context(self.state_storage_serviceurl, table_ns, table_name)

@@ -91,7 +91,7 @@ class Bundle(Model):
     range = CharField(max_length=200)
 
     def __str__(self):
-        return str(self.pk) + '--' + self.namespace.name + '/' + self.range
+        return f'{str(self.pk)}--{self.namespace.name}/{self.range}'
 
 @python_2_unicode_compatible
 class Topic(Model):
@@ -142,7 +142,7 @@ class Topic(Model):
     def get_absolute_url(self):
         url = reverse('topic', args=[self.url_name()])
         if self.namespace.is_global():
-            url += '?cluster=' + self.cluster.name
+            url += f'?cluster={self.cluster.name}'
         return url
 
     class Meta:

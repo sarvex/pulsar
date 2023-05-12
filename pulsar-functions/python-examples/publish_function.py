@@ -31,5 +31,5 @@ class PublishFunction(Function):
     publish_topic = "publishtopic"
     if "publish-topic" in context.get_user_config_map():
       publish_topic = context.get_user_config_value("publish-topic")
-    context.publish(publish_topic, input + '!')
+    context.publish(publish_topic, f'{input}!')
     return
